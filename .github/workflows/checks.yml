@@ -22,4 +22,4 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install pytest==9.2.0
-          "$RUNNER_TEMP/venv/bin/pytest" checks/test_personal_data.py -q
+          "$RUNNER_TEMP/venv/bin/pytest" checks/test_personal_data.py sync/test_sync_core.py -q
