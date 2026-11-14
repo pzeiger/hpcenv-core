@@ -1,0 +1,80 @@
+# Keeps core/ current. Weekly, or by hand from the Actions tab: sync core/ to hpcenv-core
+# main and, if that changed anything, put the result on the branch core-sync and open (or
+# update) one pull request for review. Never pushes to the default branch. The job
+# force-pushes core-sync, so anything committed on that branch by hand is overwritten.
+# Copied from core/sync/workflows/ into .github/workflows/ once; the copy is the
+# consumer's own.
+#
+# Needs the setting "Allow GitHub Actions to create and approve pull requests"
+# (Settings > Actions > General > Workflow permissions, in the repository or the
+# organisation).
+#
+# A branch pushed and a pull request opened with GITHUB_TOKEN start no workflow, so the
+# checks would never appear on the sync pull request. The exception is workflow_dispatch:
+# the last step starts core-drift and personal-data on the branch, and their results attach
+# to the pull request's head commit like those of a pull_request run. Other workflows of the
+# consumer that run on pull_request stay unstarted on a sync pull request until someone
+# pushes to it or closes and reopens it.
+name: core-sync
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency: core-sync
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: core-sync
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+
+      - name: Sync core/ to hpcenv-core main
+        run: |
+          echo "OLD=$(cat core/CORE_COMMIT)" >> "$GITHUB_ENV"
+          core/sync/sync-core.sh main
+
+      - name: Open or update the pull request
+        run: |
+          if [ -z "$(git status --porcelain --untracked-files=all -- core)" ]; then
+            echo "nothing to propose"
+            exit 0
+          fi
+          sha=$(cat core/CORE_COMMIT)
+          title="core: update hpcenv-core to ${sha:0:12}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add core
+          git commit -m "$title"
+          {
+            echo "core/ is now hpcenv-core \`$sha\` (was \`$OLD\`)."
+            echo "Compare: https://github.com/pzeiger/hpcenv-core/compare/$OLD...$sha"
+            echo
+            echo "Changed files (read the diff before merging):"
+            echo
+            git diff --stat HEAD~1 HEAD
+            echo
+            echo "Opened by the core-sync workflow."
+          } > "$RUNNER_TEMP/body.md"
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          number=$(gh pr list --head "$BRANCH" --base "$DEFAULT_BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base "$DEFAULT_BRANCH" --head "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi
+          gh workflow run core-drift.yml --ref "$BRANCH"
+          gh workflow run personal-data.yml --ref "$BRANCH"

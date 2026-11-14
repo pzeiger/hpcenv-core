@@ -2,6 +2,8 @@
 # Deliberate exceptions to the no-names rule: the holder line of LICENSE, the repository's own URL, the maintainer's commit identity.
 LICENSE	extra	Copyright (c) 2026, Paul Zeiger
 README.md	extra	github.com/pzeiger/hpcenv-core
+sync/sync-core.sh	extra	github.com/pzeiger/hpcenv-core
+sync/workflows/core-sync.yml	extra	github.com/pzeiger/hpcenv-core
 # The maintainer's commit identity, public on every commit.
 author	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
 committer	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
