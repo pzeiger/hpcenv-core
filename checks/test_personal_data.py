@@ -440,3 +440,16 @@ def test_history_survives_separator_bytes_in_a_message(tmp_path):
     assert result.stdout.split()[1:] == ["message", "email"]
     commit(tmp_path, {"a.txt": "ok2\n"}, message="x\x1ey")
     assert len(run(tmp_path, "--history").stdout.splitlines()) == 1
+
+
+def test_history_message_entry_suppresses_exactly_its_text(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    commit(repo, {"a.txt": "ok\n"}, message="Merge pull request #1 from alicex/topic")
+    extra = extra_file(tmp_path, "alicex", "bobx")
+    allow = allow_file(tmp_path, ("message", "extra", "from alicex/"))
+    args = ("--history", "--extra", extra, "--allow", allow)
+    assert run(repo, "--history", "--extra", extra).returncode == 1
+    assert run(repo, *args).returncode == 0
+    commit(repo, {"b.txt": "ok\n"}, message="Merge pull request #2 from alicex/topic\n\nwith bobx")
+    assert [line.split()[1:] for line in run(repo, *args).stdout.splitlines()] == [["message", "extra:4"]]
