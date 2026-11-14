@@ -46,6 +46,10 @@ mkdir -p .github/workflows
 cp core/sync/workflows/*.yml .github/workflows/
 ```
 
+`core-sync.yml` names hpcenv-core's public URL, the one approved exception to the no-names rule: a
+consumer that runs the check with a private literal list allow-lists that URL for
+`.github/workflows/core-sync.yml` in its own `personal-data-allow.txt`.
+
 **Syncing.** From the consumer's top level (or with `-C <dir>`):
 
 ```
