@@ -18,7 +18,8 @@ consuming repository passes those in by variable.
 | `sync/sync-core.sh` | copies a hpcenv-core commit into a consumer's `core/`; `--check` finds drift | present |
 | `sync/workflows/` | workflow templates a consumer copies once: drift check, personal-data check, scheduled sync | present |
 | `sync/test_sync_core.py` | tests of `sync-core.sh` on throwaway repositories | present |
-| `shell/accounts.sh` | `sbatch` and `salloc` wrappers that add the account from a variable | planned |
+| `shell/accounts.sh` | `sbatch` and `salloc` functions that add the account from variables; `hpcenv_account` | present |
+| `shell/test_accounts.py` | tests of `accounts.sh` against stub `sbatch` and `salloc` | present |
 | `shell/github-identity.sh` | the git e-mail rule for GitHub repositories (`includeIf` entries, report, undo) | present |
 | `shell/setup-user-common.sh` | the cluster-independent part of a cluster's `setup-user.sh`: options, `--undo`, the `~/.bashrc` block, shared checks | present |
 | `shell/test_github_identity.py`, `shell/test_setup_user_common.py` | tests of the two, in a temporary `HOME` | present |
@@ -80,6 +81,73 @@ so the job starts `core-drift` and `personal-data` on the `core-sync` branch its
 the pull request. GitHub disables scheduled workflows after 60 days without repository
 activity; start `core-sync` by hand from the Actions tab then. A consumer's own `pull_request` workflows stay unstarted until someone
 pushes to the branch or closes and reopens the pull request.
+
+## Account functions
+
+`shell/accounts.sh` (bash) is sourced from a cluster's `env.sh`. It defines `sbatch` and `salloc`
+functions that add `-A <account>`, so that a member submits `sbatch template.sbatch ...` without
+editing the template's `--account` line. The consumer's `env.sh` passes the cluster's rules in
+by variable, and sets them before it sources the file:
+
+| Variable | Meaning |
+|---|---|
+| `HPCENV_ACCOUNT_PROJECT` | the member's project, as a value; unset or empty: the commands run unchanged |
+| `HPCENV_ACCOUNT_CPU` | account template for CPU jobs, `{project}` standing for the project; unset: the commands run unchanged |
+| `HPCENV_ACCOUNT_GPU` | account template for GPU jobs; unset: the CPU template serves GPU jobs too |
+| `HPCENV_ACCOUNT_GPU_PARTITIONS` | space-separated globs of GPU partition names; unset: no partition counts as GPU |
+
+A cluster has either one account for every job or one account per kind; placeholders in both
+cases (the suffixes and the globs are the cluster's own). `env.sh` exports the variables, which
+child processes need (the consumer template check below, scripts that call `hpcenv_account`):
+
+```bash
+# One account for CPU and GPU jobs
+export HPCENV_ACCOUNT_PROJECT="${MYSITE_PROJECT:-}"
+export HPCENV_ACCOUNT_CPU='{project}'
+
+# One account per kind, GPU partitions named by a glob
+export HPCENV_ACCOUNT_PROJECT="${MYSITE_PROJECT:-}"
+export HPCENV_ACCOUNT_CPU='{project}-cpu'
+export HPCENV_ACCOUNT_GPU='{project}-gpu'
+export HPCENV_ACCOUNT_GPU_PARTITIONS='gpu*'
+
+source core/shell/accounts.sh
+```
+
+A job counts as GPU when its partition matches a glob (a comma list matches if any entry does)
+or it requests GPUs (`-G`, `--gpus*`, `--gres=gpu[:...]`). For `sbatch` the script is the first
+argument that is a regular readable file whose first line starts with `#!` (`sbatch` rejects any
+other file as a script, so the value of an option is never taken for it). The options before
+the script and the script's `#SBATCH` lines are read; a partition on the command line replaces
+the script's, and the arguments after the script belong to it. With no such file (`--wrap`, a
+missing file) every argument is read. A script on standard input is not read: the account then
+follows the command-line options only, so pass the script as a file or give `-p` or `--gpus` on
+the command line. `salloc` reads no script and every argument of its command line, including
+those of the command it runs.
+
+The commands run unchanged, with no `-A`, when the command line has `-A` or `--account` in any
+form, when `SBATCH_ACCOUNT` (`sbatch`) or `SALLOC_ACCOUNT` (`salloc`) is non-empty, or when the
+project or the CPU template is unset. The real binary is called with `command`, an alias of the
+same name is removed, and the file is safe to source twice and under `set -u`.
+
+`hpcenv_account cpu|gpu` prints the account the templates give (status 1 when unconfigured, 2
+for another argument). It is a shell function, not exported: a script that runs outside the
+shell, such as an `srun` wrapper that needs a default `ACCOUNT`, sources `core/shell/accounts.sh`
+itself, with the `HPCENV_ACCOUNT_*` variables exported.
+
+**Checking a consumer's templates.** `shell/test_accounts.py` runs the functions against stub
+executables for both kinds of cluster above (`pytest shell/test_accounts.py`). A consumer runs the same file
+against its own job templates: a table file lists one template per line as `cpu <path>` or
+`gpu <path>` (paths relative to the table, `#` starts a comment), and the cluster's exported
+`HPCENV_ACCOUNT_CPU`, `HPCENV_ACCOUNT_GPU` and `HPCENV_ACCOUNT_GPU_PARTITIONS` must be in the
+environment, which sourcing its `env.sh` first provides (the test fails and names
+`HPCENV_ACCOUNT_CPU` when it is missing):
+
+```
+HPCENV_ACCOUNT_CHECK_TABLE=<table> pytest core/shell/test_accounts.py -k test_consumer_template
+```
+
+Each template must then get the account of the kind its line names.
 
 ## Personal-data check
 
