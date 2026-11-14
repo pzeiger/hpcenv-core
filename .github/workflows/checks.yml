@@ -18,6 +18,8 @@ jobs:
       # The private literal list (--extra) is run by the maintainer, never in CI.
       - name: Personal-data check (tree)
         run: python3 checks/personal_data.py
+      - name: Shellcheck
+        run: shellcheck -x --source-path=SCRIPTDIR --shell=bash shell/*.sh lammps/lammps-gpu-selftest.sh
       - name: Unit tests
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
@@ -25,6 +27,4 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pytest" checks/test_personal_data.py sync/test_sync_core.py -q
       - name: Shell helper tests
         run: |
-          "$RUNNER_TEMP/venv/bin/pytest" shell/test_github_identity.py shell/test_setup_user_common.py lammps/test_lammps_gpu_selftest.py -q
-      - name: Shellcheck
-        run: shellcheck -x --source-path=SCRIPTDIR shell/github-identity.sh shell/setup-user-common.sh lammps/lammps-gpu-selftest.sh
+          "$RUNNER_TEMP/venv/bin/pytest" shell/test_accounts.py shell/test_github_identity.py shell/test_setup_user_common.py lammps/test_lammps_gpu_selftest.py -q
