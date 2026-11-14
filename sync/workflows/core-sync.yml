@@ -5,6 +5,14 @@
 # Copied from core/sync/workflows/ into .github/workflows/ once; the copy is the
 # consumer's own.
 #
+# GitHub disables scheduled workflows after 60 days without repository activity; start this
+# one by hand from the Actions tab (workflow_dispatch) when that has happened. When core/ is
+# current again but a core-sync pull request is still open, the job closes it and deletes the
+# branch.
+#
+# HPCENV_CORE_URL below names the hpcenv-core repository for the sync script and for the
+# compare link; the script's default is the same public URL.
+#
 # Needs the setting "Allow GitHub Actions to create and approve pull requests"
 # (Settings > Actions > General > Workflow permissions, in the repository or the
 # organisation).
@@ -29,6 +37,9 @@ permissions:
 
 concurrency: core-sync
 
+env:
+  HPCENV_CORE_URL: https://github.com/pzeiger/hpcenv-core.git
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -48,8 +59,12 @@ jobs:
 
       - name: Open or update the pull request
         run: |
+          number=$(gh pr list --head "$BRANCH" --base "$DEFAULT_BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -z "$(git status --porcelain --untracked-files=all -- core)" ]; then
             echo "nothing to propose"
+            if [ -n "$number" ]; then
+              gh pr close "$number" --delete-branch --comment "core/ is current; nothing to propose."
+            fi
             exit 0
           fi
           sha=$(cat core/CORE_COMMIT)
@@ -61,7 +76,7 @@ jobs:
           git commit -m "$title"
           {
             echo "core/ is now hpcenv-core \`$sha\` (was \`$OLD\`)."
-            echo "Compare: https://github.com/pzeiger/hpcenv-core/compare/$OLD...$sha"
+            echo "Compare: ${HPCENV_CORE_URL%.git}/compare/$OLD...$sha"
             echo
             echo "Changed files (read the diff before merging):"
             echo
@@ -70,7 +85,6 @@ jobs:
             echo "Opened by the core-sync workflow."
           } > "$RUNNER_TEMP/body.md"
           git push --force origin "HEAD:refs/heads/$BRANCH"
-          number=$(gh pr list --head "$BRANCH" --base "$DEFAULT_BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -n "$number" ]; then
             gh pr edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
           else
