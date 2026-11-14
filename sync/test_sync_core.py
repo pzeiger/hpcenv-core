@@ -228,3 +228,47 @@ def test_personal_data_check_from_the_consumer_top_level_is_clean(consumer, upst
     result = subprocess.run([sys.executable, "core/checks/personal_data.py"], cwd=consumer,
                             env=GIT_ENV, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("args", [("main",), ("--check",)])
+def test_outside_a_git_repository_nothing_is_touched(tmp_path, upstream, args):
+    plain = tmp_path / "plain"
+    (plain / "core").mkdir(parents=True)
+    (plain / "core" / "mine").write_text("precious\n")
+    result = run(plain, upstream, *args, cwd=plain)
+    assert result.returncode != 0 and "not in a git repository" in result.stderr
+    assert (plain / "core" / "mine").read_text() == "precious\n"
+    result = run(plain, upstream, "-C", str(plain), *args, cwd=tmp_path)
+    assert result.returncode != 0 and "not in a git repository" in result.stderr
+    assert (plain / "core" / "mine").read_text() == "precious\n"
+
+
+@pytest.mark.parametrize("args", [("main",), ("--check",)])
+def test_core_that_is_a_symlink_is_refused(consumer, upstream, tmp_path, args):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "mine").write_text("precious\n")
+    (consumer / "core").symlink_to(elsewhere)
+    commit(consumer, "link")
+    result = run(consumer, upstream, *args)
+    assert result.returncode != 0 and "symbolic link" in result.stderr
+    assert (consumer / "core").is_symlink()
+    assert (elsewhere / "mine").read_text() == "precious\n"
+
+
+@pytest.mark.parametrize("args", [("main",), ("--check",)])
+def test_core_that_is_a_submodule_is_refused(consumer, upstream, args):
+    git(consumer, "update-index", "--add", "--cacheinfo", f"160000,{git(upstream, 'rev-parse', 'HEAD')},core")
+    git(consumer, "commit", "-q", "-m", "submodule")
+    result = run(consumer, upstream, *args)
+    assert result.returncode != 0 and "submodule" in result.stderr
+    assert not (consumer / "core").exists()
+
+
+def test_check_says_when_the_pinned_commit_is_gone_upstream(consumer, upstream):
+    sync(consumer, upstream)
+    commit(consumer, "core")
+    (consumer / "core" / "CORE_COMMIT").write_text("0" * 40 + "\n")
+    commit(consumer, "pin a commit upstream does not have")
+    result = run(consumer, upstream, "--check")
+    assert result.returncode != 0 and "not available" in result.stderr and "0" * 40 in result.stderr

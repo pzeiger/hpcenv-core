@@ -35,7 +35,11 @@ main() {
     [ $check = 1 ] || [ -n "$ref" ] || usage
 
     cd "$dir"
-    cd "$(git rev-parse --show-toplevel)" || die "$dir is not in a git repository"
+    local top
+    top=$(git rev-parse --show-toplevel) || die "$dir is not in a git repository"
+    cd "$top"
+    [ ! -L core ] || die "core is a symbolic link; it must be a directory of this repository"
+    [[ $(git ls-files --stage -- core) != 160000* ]] || die "core is a submodule; it must be a directory of this repository"
 
     if [ $check = 1 ]; then
         [ -f core/CORE_COMMIT ] || die "core/CORE_COMMIT is missing"
@@ -49,8 +53,10 @@ main() {
     trap 'rm -rf "$tmp"' EXIT
     export GIT_TERMINAL_PROMPT=0
     git init -q "$tmp/up"
-    git -C "$tmp/up" fetch -q --depth 1 "${HPCENV_CORE_URL:-https://github.com/pzeiger/hpcenv-core.git}" "$ref" \
-        || die "cannot fetch '$ref' from hpcenv-core"
+    git -C "$tmp/up" fetch -q --depth 1 "${HPCENV_CORE_URL:-https://github.com/pzeiger/hpcenv-core.git}" "$ref" || {
+        [ $check = 1 ] && die "commit $ref (core/CORE_COMMIT) is not available in hpcenv-core: its history was rewritten or force-pushed, or hpcenv-core is unreachable"
+        die "cannot fetch '$ref' from hpcenv-core"
+    }
     local sha
     sha=$(git -C "$tmp/up" rev-parse 'FETCH_HEAD^{commit}')
     mkdir "$tmp/new"
