@@ -1,5 +1,5 @@
 # Exceptions to checks/personal_data.py: <path glob> TAB <pattern name> TAB <text>.
-# Deliberate exceptions to the no-names rule: the holder line of LICENSE, the repository's own URL, the maintainer's commit identity.
+# Deliberate exceptions to the no-names rule: the holder line of LICENSE, the repository's own URL, the maintainer's commit identity, the owner in GitHub's web-merge subject.
 LICENSE	extra	Copyright (c) 2026, Paul Zeiger
 README.md	extra	github.com/pzeiger/hpcenv-core
 sync/sync-core.sh	extra	github.com/pzeiger/hpcenv-core
@@ -7,6 +7,9 @@ sync/workflows/core-sync.yml	extra	github.com/pzeiger/hpcenv-core
 # The maintainer's commit identity, public on every commit.
 author	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
 committer	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
+# GitHub's web-merge subject "Merge pull request #N from <owner>/<branch>" names the owner account.
+message	extra	from pzeiger/
+
 # Invented example values in the check's tests.
 checks/test_personal_data.py	access-allocation	ABC123456
 checks/test_personal_data.py	delta-account	abcd-delta-gpu
