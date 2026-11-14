@@ -35,3 +35,12 @@ checks/test_personal_data.py	path	/home/bob
 checks/test_personal_data.py	path	/pscratch/sd/a/alice
 checks/test_personal_data.py	path	/u/alice
 checks/test_personal_data.py	path	/users/alice
+
+# Ways of writing a github.com remote (user@host), which look like e-mail addresses, and a placeholder address.
+shell/github-identity.sh	email	git@github.com
+shell/github-identity.sh	email	git@ssh.github.com
+shell/github-identity.sh	email	user@github.com
+shell/github-identity.sh	email	something@host.tld
+shell/test_github_identity.py	email	git@github.com
+shell/test_github_identity.py	email	git@ssh.github.com
+shell/test_github_identity.py	email	user@github.com
