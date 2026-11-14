@@ -62,15 +62,16 @@ has staged, unstaged or untracked changes. `--check` compares file contents, not
 
 | Template | Runs | Does |
 |---|---|---|
-| `core-drift.yml` | pull requests | `core/sync/sync-core.sh --check`: red when a pull request edits `core/` |
+| `core-drift.yml` | pull requests, pushes to `main` | `core/sync/sync-core.sh --check`: red when `core/` differs from `CORE_COMMIT` |
 | `personal-data.yml` | pull requests, pushes to `main` | `python3 core/checks/personal_data.py` (the nested `personal-data-allow.txt` in `core/` applies below `core/`) |
-| `core-sync.yml` | weekly, by hand | syncs to hpcenv-core `main`; when that changed `core/`, force-pushes the branch `core-sync` and opens or updates one pull request |
+| `core-sync.yml` | weekly, by hand | syncs to hpcenv-core `main`; when that changed `core/`, force-pushes the branch `core-sync` and opens or updates one pull request; when `core/` is current again, closes a stale one |
 
 `core-sync.yml` needs the setting "Allow GitHub Actions to create and approve pull requests"
 (Settings > Actions > General). A pull request that `GITHUB_TOKEN` opens starts no workflow,
 so the job starts `core-drift` and `personal-data` on the `core-sync` branch itself
 (`workflow_dispatch` is the one event `GITHUB_TOKEN` may trigger) and their results appear on
-the pull request. A consumer's own `pull_request` workflows stay unstarted until someone
+the pull request. GitHub disables scheduled workflows after 60 days without repository
+activity; start `core-sync` by hand from the Actions tab then. A consumer's own `pull_request` workflows stay unstarted until someone
 pushes to the branch or closes and reopens the pull request.
 
 ## Personal-data check
