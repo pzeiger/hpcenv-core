@@ -1,0 +1,23 @@
+# Fails a pull request, or a push to main, that leaves core/ different from hpcenv-core at
+# core/CORE_COMMIT.
+# Copied from core/sync/workflows/ into .github/workflows/ once; the copy is the
+# consumer's own. Also runs when started by hand or by core-sync.yml.
+name: core-drift
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: core/sync/sync-core.sh --check

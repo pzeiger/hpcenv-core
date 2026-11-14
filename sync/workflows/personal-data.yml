@@ -1,0 +1,23 @@
+# Runs hpcenv-core's personal-data check on the consumer's tree. Copied from
+# core/sync/workflows/ into .github/workflows/ once; the copy is the consumer's own.
+# Also runs when started by hand or by core-sync.yml. The maintainer's private literal list
+# (--extra) is run by hand, never here.
+name: personal-data
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  personal-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: python3 core/checks/personal_data.py

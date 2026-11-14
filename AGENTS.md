@@ -7,9 +7,10 @@ mistake here is published and copied.
 - **No personal information**: no names, user names, e-mail addresses (GitHub noreply
   addresses aside), cluster accounts, allocations or project IDs, account-tied paths,
   session data (`.claude/`, transcripts) or private notes, in files and in commit messages.
-  Three deliberate exceptions, all public already, are allowed by `personal-data-allow.txt`:
-  the holder line of `LICENSE`, the repository's own GitHub URL and the maintainer's commit
-  identity (author and committer). The file also lists the invented example values in the
+  Four deliberate exceptions, all public already, are allowed by `personal-data-allow.txt`:
+  the holder line of `LICENSE`, the repository's own GitHub URL, the maintainer's commit
+  identity (author and committer) and the owner account in GitHub's web-merge subject
+  (`Merge pull request #N from <owner>/<branch>`). The file also lists the invented example values in the
   check's tests; nothing else goes into it without a reason in the pull request.
 - **No cluster-, lab- or project-specific value** (project IDs, accounts, paths, host
   names): code here takes them from a variable that the consuming repository sets.
