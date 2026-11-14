@@ -19,8 +19,11 @@ consuming repository passes those in by variable.
 | `sync/workflows/` | workflow templates a consumer copies once: drift check, personal-data check, scheduled sync | present |
 | `sync/test_sync_core.py` | tests of `sync-core.sh` on throwaway repositories | present |
 | `shell/accounts.sh` | `sbatch` and `salloc` wrappers that add the account from a variable | planned |
-| `shell/github-identity.sh`, `shell/setup-user-common.sh` | shared user-setup helpers | planned |
-| `lammps/lammps-gpu-selftest.sh` | LAMMPS GPU self-test | planned |
+| `shell/github-identity.sh` | the git e-mail rule for GitHub repositories (`includeIf` entries, report, undo) | present |
+| `shell/setup-user-common.sh` | the cluster-independent part of a cluster's `setup-user.sh`: options, `--undo`, the `~/.bashrc` block, shared checks | present |
+| `shell/test_github_identity.py`, `shell/test_setup_user_common.py` | tests of the two, in a temporary `HOME` | present |
+| `lammps/lammps-gpu-selftest.sh` | runtime self-test of GPU-accelerated LAMMPS in a container image | present |
+| `lammps/test_lammps_gpu_selftest.py` | tests of the self-test against stub `lmp` and `nvidia-smi` | present |
 
 ## How a consuming repository uses it
 
@@ -95,6 +98,57 @@ Exceptions are listed in `personal-data-allow.txt` files: each applies below its
 directory, so a vendored copy in `core/` brings its own. `python3 checks/personal_data.py
 --help` and the module docstring give the details. The tests are
 `checks/test_personal_data.py` (pytest).
+
+## User-setup helpers
+
+A cluster's `setup-user.sh` is a one-shot, idempotent per-user setup (`--check` reports only,
+`--undo` removes what it wrote, `--github-email ADDRESS` sets the commit address for GitHub
+repositories). `shell/setup-user-common.sh` holds what does not depend on the cluster, as
+functions the cluster's script calls after `set -euo pipefail`; the script keeps its usage text,
+the project lookup, the check of its `env.sh` and the cluster's own checks. The common file
+sources `shell/github-identity.sh` from its own directory. The comment block at the top of
+`setup-user-common.sh` is the interface: the variables the script sets first
+(`SETUP_USER_NAME`, `SETUP_USER_PROJECT_NOUN`, `RC`, `MARK`, `ENDMARK`, `ENVSH`), the variables
+the functions set (`CHECK`, `UNDO`, `GHMAIL`, `PROJ`, `WARNINGS`), the output helpers (`ok`,
+`warn`, `act`, `more`) and the functions. A script, with placeholders:
+
+```bash
+#!/bin/bash
+# setup-user.sh: ...usage text; --help prints this block, from line 2 to the `set -euo` line
+set -euo pipefail
+. "<path to core>/shell/setup-user-common.sh"
+SETUP_USER_NAME=<repository name>
+SETUP_USER_PROJECT_NOUN="a name"
+setup_user_parse_args "$@"
+setup_user_validate
+ENVSH=<path of the cluster's env.sh>
+RC="$HOME/.bashrc"
+MARK="# >>> <repository name> (<cluster>) >>>"
+ENDMARK="# <<< <repository name> (<cluster>) <<<"
+if [ "$UNDO" = 1 ]; then setup_user_undo; fi
+setup_user_begin "<repository name> user setup: <cluster>"
+# ...the cluster's project lookup; warn "..."; setup_user_stop when it fails...
+# ...when $RC has no block and CHECK is 0: setup_user_add_block <VAR> "$PROJ" <cluster>
+# ...setup_user_cache_dir <dir>; setup_user_check_apptainer; the cluster's checks...
+setup_user_github_report
+setup_user_summary
+```
+
+`shell/github-identity.sh` can also be sourced alone by a script that defines `ok` and `warn`:
+`github_identity_valid ADDRESS`, `github_identity_set ADDRESS` (writes `~/.gitconfig-github` and
+one `includeIf` entry per way of writing a github.com remote in the global git config),
+`github_identity_effective`, `github_identity_report` and `github_identity_undo`. The rule needs
+git 2.36 or newer.
+
+## LAMMPS GPU self-test
+
+`lammps/lammps-gpu-selftest.sh` runs a small Lennard-Jones melt on a GPU node with the CPU
+path, the GPU package and KOKKOS-CUDA, and compares the step-0 total energy of each GPU backend
+with the CPU value (relative tolerance `LAMMPS_GPU_SELFTEST_TOL`, default `1e-2`). Exit 0 is a
+pass, 1 a failed run or a mismatch, 2 that it cannot run (no `lmp`, no GPU). A container recipe
+copies it into the image as `lammps-gpu-selftest`; run it inside the image on a GPU node
+(`apptainer exec --nv <image>.sif lammps-gpu-selftest`). The tests use stub `lmp` and
+`nvidia-smi` binaries: the run itself needs the LAMMPS binary and a GPU.
 
 ## Licenses
 
