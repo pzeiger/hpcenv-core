@@ -1,0 +1,25 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      # The private literal list (--extra) is run by the maintainer, never in CI.
+      - name: Personal-data check (tree)
+        run: python3 checks/personal_data.py
+      - name: Unit tests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install pytest==9.2.0
+          "$RUNNER_TEMP/venv/bin/pytest" checks/test_personal_data.py -q

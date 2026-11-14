@@ -1,0 +1,32 @@
+# Exceptions to checks/personal_data.py: <path glob> TAB <pattern name> TAB <text>.
+# Deliberate exceptions to the no-names rule: the holder line of LICENSE, the repository's own URL, the maintainer's commit identity.
+LICENSE	extra	Copyright (c) 2026, Paul Zeiger
+README.md	extra	github.com/pzeiger/hpcenv-core
+# The maintainer's commit identity, public on every commit.
+author	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
+committer	extra	Paul Zeiger <18260343+pzeiger@users.noreply.github.com>
+# Invented example values in the check's tests.
+checks/test_personal_data.py	access-allocation	ABC123456
+checks/test_personal_data.py	delta-account	abcd-delta-gpu
+checks/test_personal_data.py	delta-account	abcd-dtai-gh
+checks/test_personal_data.py	email	alice@mail-lab.edu
+checks/test_personal_data.py	email	bob@mail-lab.edu
+checks/test_personal_data.py	email	carol@mail-lab.edu
+checks/test_personal_data.py	lumi-project	project_462000123
+checks/test_personal_data.py	lumi-project	project_465000123
+checks/test_personal_data.py	naiss-project	NAISS 2025/22-33
+checks/test_personal_data.py	naiss-project	NAISS2025-22-33
+checks/test_personal_data.py	naiss-project	SNIC 2022/1-2
+checks/test_personal_data.py	naiss-project	naiss2025-22-33
+checks/test_personal_data.py	naiss-project	snic2021-22-33
+checks/test_personal_data.py	nersc-project	m1234
+checks/test_personal_data.py	path	/Users/alice
+checks/test_personal_data.py	path	/cfs/klemming/home/a/alice
+checks/test_personal_data.py	path	/cfs/klemming/scratch/a/alice
+checks/test_personal_data.py	path	/global/cfs/cdirs/proj
+checks/test_personal_data.py	path	/global/homes/a/alice
+checks/test_personal_data.py	path	/home/alice
+checks/test_personal_data.py	path	/home/bob
+checks/test_personal_data.py	path	/pscratch/sd/a/alice
+checks/test_personal_data.py	path	/u/alice
+checks/test_personal_data.py	path	/users/alice
