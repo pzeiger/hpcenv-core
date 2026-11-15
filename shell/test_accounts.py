@@ -336,7 +336,7 @@ def _consumer_templates(table=None):
     if not table:
         return []
     rows = (line.split("#")[0].split(maxsplit=1) for line in Path(table).read_text().splitlines())
-    return [(kind, str(Path(table).parent / name.strip())) for kind, name in filter(None, rows)]
+    return [(kind, str(Path(table).absolute().parent / name.strip())) for kind, name in filter(None, rows)]
 
 
 @pytest.mark.parametrize("kind, path", _consumer_templates())
@@ -344,6 +344,7 @@ def test_consumer_template(run, kind, path):
     if "HPCENV_ACCOUNT_CPU" not in os.environ:
         pytest.fail("HPCENV_ACCOUNT_CPU is not set: export the cluster's HPCENV_ACCOUNT_* variables "
                     "(its env.sh must export them) when HPCENV_ACCOUNT_CHECK_TABLE is given")
+    assert Path(path).is_file(), f"{path} is not a file: paths in the table are relative to the table"
     cpu = os.environ["HPCENV_ACCOUNT_CPU"]
     gpu = os.environ.get("HPCENV_ACCOUNT_GPU", "")
     globs = os.environ.get("HPCENV_ACCOUNT_GPU_PARTITIONS", "")
@@ -364,7 +365,7 @@ def test_template_table(tmp_path):
         table.write_text(text)
         proc = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q", str(Path(__file__)),
                                "-k", "test_consumer_template"], capture_output=True, text=True, env=env, cwd=tmp_path)
-        return proc.stdout.splitlines()[-1]
+        return proc.stdout
 
     assert "2 passed" in check("# kind  template\ncpu jobs/cpu.sbatch  # comment\n\ngpu jobs/gpu.sbatch\n")
     assert "1 failed" in check("gpu jobs/cpu.sbatch\n")
@@ -373,3 +374,7 @@ def test_template_table(tmp_path):
                           "-k", "test_consumer_template"], capture_output=True, text=True, env=unset, cwd=tmp_path)
     assert "HPCENV_ACCOUNT_CPU is not set" in out.stdout
     assert _consumer_templates(str(table)) == [("gpu", str(tmp_path / "jobs/cpu.sbatch"))]
+    out = check("cpu jobs/missing.sbatch\n")
+    assert "1 failed" in out and "is not a file" in out
+    env["HPCENV_ACCOUNT_CHECK_TABLE"] = "table.txt"  # relative to the working directory, tmp_path
+    assert "2 passed" in check("cpu jobs/cpu.sbatch\ngpu jobs/gpu.sbatch\n")
