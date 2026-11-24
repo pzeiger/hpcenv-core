@@ -12,6 +12,7 @@ consuming repository passes those in by variable.
 | `LICENSE` | BSD-3-Clause, covers the code | present |
 | `docs/LICENSE` | CC BY 4.0, covers documentation | present |
 | `README.md`, `AGENTS.md`, `CLAUDE.md` | this file; the rules for contributors and agents; `CLAUDE.md` imports `AGENTS.md` | present |
+| `AGENTS-common.md` | rules for every consuming repository (working in worktrees); a consumer's `CLAUDE.md` imports it and its `AGENTS.md` points to it | present |
 | `checks/personal_data.py` | personal-data check (tree and history) and its tests | present |
 | `personal-data-allow.txt` | this repository's exceptions to that check | present |
 | `.github/workflows/checks.yml` | the check and the tests on every pull request | present |
@@ -40,6 +41,9 @@ sync/sync-core.sh -C <consumer> main
 git -C <consumer> add core
 git -C <consumer> commit -m "core: vendor hpcenv-core"
 ```
+
+Add `@core/AGENTS-common.md` to the consumer's `CLAUDE.md`, and a line to its `AGENTS.md`
+telling agents to read `core/AGENTS-common.md` (Codex reads `AGENTS.md` only, without imports).
 
 Then, from the consumer's top level, copy the three workflow templates into
 `.github/workflows/` (workflows cannot run from `core/`) and commit them; the copies are the
